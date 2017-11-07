@@ -1,49 +1,46 @@
-import Spritesheet from './spritesheet.js';
-import {loadLevel, loadImage, imageLoaded} from './loaders.js';
+import {
+    loadLevel,
+    loadImage
+} from './loaders.js';
+import {
+    loadBackgroundSprites
+} from './sprites.js';
+import Compositer from './composite.js';
+import {
+    createBckgroundLayer,
+    createSpriteLayer
+} from './layers.js';
+import {
+    createMario
+} from './entities.js';
+
+import Timer from './timer.js';
+
+
 
 const canvas = document.getElementById('mycanvas');
 const context = canvas.getContext('2d');
 
 
-function drawBackground(background, context,sprite){
-    background.ranges.forEach(([x1,x2,y1,y2]) =>{
-        for (let x=x1; x<x2;x++){
-            for(let y=y1;y<y2;y++){
-                sprite.drawTiles(background.title,context,x,y);
-            }
+
+Promise.all([loadBackgroundSprites(), loadLevel('1-1'), createMario()])
+    .then(([backgroundSprites, level, mario]) => {
+        const comp = new Compositer();
+        const backgroundLayer = createBckgroundLayer(level.backgrounds, backgroundSprites);
+        comp.layers.push(backgroundLayer);
+
+        const spriteLayer = createSpriteLayer(mario);
+        comp.layers.push(spriteLayer);
+
+        const gravity = 30;
+        mario.position.set(64, 180);
+        mario.velocity.set(200, -600);
+
+        const timer = new Timer(1/60);
+        timer.update = function update(deltaTime) {
+            comp.draw(context);
+            mario.update(deltaTime);
+            mario.velocity.y += gravity;
         }
+        timer.start();
     })
-}
-
-Promise.all([loadBackgroundSprites(), loadLevel('1-1'), loadMarioSprite()])
-    .then(([sprite,level,marioSprite])=>{
-        // console.log(sprite,level,marioSprite);
-        level.backgrounds.forEach((background)=>{
-            drawBackground(background,context,sprite);
-        })
-        marioSprite.draw('idle',context,64,64);
-    })
-
-
-function loadBackgroundSprites(){
-//    return loadImage('/images/tiles.png')
-    return imageLoaded('/images/tiles.png')
-    .then((image)=>{
-        // console.log(image);
-        const sprite = new Spritesheet(image, 16,16);
-        sprite.defineTile('ground',0,0);
-        sprite.defineTile('sky',3,23);
-        return sprite;
-    })
-}
-
-
-function loadMarioSprite(){
-        return imageLoaded('/images/characters.gif')
-        .then((image)=>{
-            const sprite = new Spritesheet(image, 16,16);
-            sprite.define('idle',17,3,16,16);
-            return sprite;
-        })
-    }
-    
